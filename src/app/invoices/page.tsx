@@ -90,8 +90,9 @@ export default function InvoiceGenerator() {
         return;
       }
       
-      // Use require for better compatibility in Next.js client components
-      const html2pdf = require("html2pdf.js");
+      // Dynamic import to prevent SSR issues and handle ES modules correctly
+      const html2pdfModule = await import("html2pdf.js");
+      const html2pdf = html2pdfModule.default || html2pdfModule;
       
       const opt = {
         margin: 0,
@@ -102,9 +103,9 @@ export default function InvoiceGenerator() {
       };
 
       await html2pdf().set(opt).from(element).save();
-    } catch (error) {
+    } catch (error: any) {
       console.error("PDF generation failed:", error);
-      alert("Failed to generate PDF. Please try again.");
+      alert(`Failed to generate PDF: ${error.message || error}`);
     } finally {
       setIsDownloading(false);
     }
