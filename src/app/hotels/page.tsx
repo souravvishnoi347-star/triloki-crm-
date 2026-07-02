@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import Image from "next/image";
 
 export default function HotelVouchers() {
+  const [isDownloading, setIsDownloading] = useState(false);
   const [data, setData] = useState({
     date: "17 May'2026",
     exoNo: "YT: YATRA 2026",
@@ -25,21 +26,36 @@ export default function HotelVouchers() {
   });
 
   const handleDownload = async () => {
-    const element = document.getElementById("pdf-content");
-    if (!element) return;
-    
-    // Dynamic import of html2pdf to prevent SSR window is not defined errors
-    const html2pdf = (await import("html2pdf.js")).default;
-    
-    const opt = {
-      margin: 0,
-      filename: `Hotel_Voucher_${data.hotelName.replace(/\s+/g, "_")}.pdf`,
-      image: { type: "jpeg" as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const }
-    };
+    try {
+      setIsDownloading(true);
+      const element = document.getElementById("pdf-content");
+      if (!element) {
+        alert("Could not find the content to download.");
+        setIsDownloading(false);
+        return;
+      }
 
-    html2pdf().set(opt).from(element).save();
+      const html2canvasModule = await import("html2canvas-pro");
+      const html2canvas = html2canvasModule.default || html2canvasModule;
+      
+      const jsPDFModule = await import("jspdf");
+      const jsPDF = jsPDFModule.jsPDF;
+
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL("image/jpeg", 0.98);
+      
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Hotel_Voucher_${data.hotelName.replace(/\s+/g, "_")}.pdf`);
+    } catch (error: any) {
+      console.error("PDF generation failed:", error);
+      alert(`Failed to generate PDF: ${error.message || error}`);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -146,8 +162,13 @@ export default function HotelVouchers() {
         {/* Controls Toolbar */}
         <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-100 shrink-0">
           <h2 className="font-semibold text-gray-700">Live Preview</h2>
-          <button onClick={handleDownload} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-md font-medium text-sm hover:bg-orange-600 transition-colors shadow-sm cursor-pointer">
-            <Download size={16} /> Download PDF
+          <button 
+            onClick={handleDownload} 
+            disabled={isDownloading}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-md font-medium text-sm hover:bg-orange-600 transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
+            {isDownloading ? "Generating PDF..." : "Download PDF"}
           </button>
         </div>
         

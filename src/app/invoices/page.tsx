@@ -90,19 +90,21 @@ export default function InvoiceGenerator() {
         return;
       }
       
-      // Dynamic import to prevent SSR issues and handle ES modules correctly
-      const html2pdfModule = await import("html2pdf.js");
-      const html2pdf = html2pdfModule.default || html2pdfModule;
+      const html2canvasModule = await import("html2canvas-pro");
+      const html2canvas = html2canvasModule.default || html2canvasModule;
       
-      const opt = {
-        margin: 0,
-        filename: `Invoice_${data.invoiceNumber || "Triloki"}.pdf`,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const }
-      };
+      const jsPDFModule = await import("jspdf");
+      const jsPDF = jsPDFModule.jsPDF;
 
-      await html2pdf().set(opt).from(element).save();
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL("image/jpeg", 0.98);
+      
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Invoice_${data.invoiceNumber || "Triloki"}.pdf`);
     } catch (error: any) {
       console.error("PDF generation failed:", error);
       alert(`Failed to generate PDF: ${error.message || error}`);
