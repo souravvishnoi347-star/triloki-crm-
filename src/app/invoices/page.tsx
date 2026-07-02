@@ -79,6 +79,24 @@ export default function InvoiceGenerator() {
     return { subTotal, total, paid, pending, totalWords: numberToWords(total) };
   }, [data.packages, data.discount, data.taxPercent, data.amountPaid]);
 
+  const handleDownload = async () => {
+    const element = document.getElementById("pdf-content");
+    if (!element) return;
+    
+    // Dynamic import of html2pdf to prevent SSR window is not defined errors
+    const html2pdf = (await import("html2pdf.js")).default;
+    
+    const opt = {
+      margin: 0,
+      filename: `Invoice_${data.invoiceNumber || "Triloki"}.pdf`,
+      image: { type: "jpeg" as const, quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const }
+    };
+
+    html2pdf().set(opt).from(element).save();
+  };
+
   return (
     <div className="flex flex-col lg:flex-row gap-6 w-full">
       {/* Left Column: Form */}
@@ -316,7 +334,7 @@ export default function InvoiceGenerator() {
         {/* Controls Toolbar */}
         <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-100">
           <h2 className="font-semibold text-gray-700">Live Preview</h2>
-          <button className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-md font-medium text-sm hover:bg-orange-600 transition-colors shadow-sm">
+          <button onClick={handleDownload} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-md font-medium text-sm hover:bg-orange-600 transition-colors shadow-sm cursor-pointer">
             <Download size={16} /> Download PDF
           </button>
         </div>
@@ -326,7 +344,7 @@ export default function InvoiceGenerator() {
           {/* Step C: Centering Wrapper */}
           <div className="flex justify-center min-w-max">
             {/* Step D: The A4 Paper */}
-            <div className="w-[210mm] min-h-[297mm] bg-white shadow-xl shrink-0 flex flex-col">
+            <div id="pdf-content" className="w-[210mm] min-h-[297mm] bg-white shadow-xl shrink-0 flex flex-col">
               
               {/* Invoice Header (Step E: No absolute positioning) */}
               <div className="bg-orange-500 p-8 flex justify-between items-center text-white w-full block">
