@@ -368,7 +368,7 @@ export default function InvoiceGenerator() {
             <div id="pdf-content" className="w-[210mm] min-h-[297mm] bg-[#ffffff] shadow-xl shrink-0 flex flex-col">
               
               {/* Invoice Header (Step E: No absolute positioning) */}
-              <div className="bg-[#f97316] p-8 flex justify-between items-center text-[#ffffff] w-full block">
+              <div className="bg-[#f97316] p-6 flex justify-between items-center text-[#ffffff] w-full block">
                 <div>
                   <h1 className="text-3xl font-bold tracking-wider mb-1">TRILOKI DIVINE JOURNEY</h1>
                   <p className="text-[#ffedd5] text-sm">Managed by Triloki Hospitality</p>
@@ -378,9 +378,9 @@ export default function InvoiceGenerator() {
                 </div>
               </div>
 
-              <div className="p-8 flex-1 flex flex-col">
+              <div className="p-6 flex-1 flex flex-col">
                 {/* Invoice Number & Date */}
-                <div className="flex justify-between items-end mb-8">
+                <div className="flex justify-between items-end mb-4">
                   <div>
                     <div className="text-[#f97316] font-bold text-2xl tracking-wide">
                       Invoice No: {data.invoiceNumber || "—"}
@@ -393,8 +393,8 @@ export default function InvoiceGenerator() {
                 </div>
 
                 {/* Guest Details Grid */}
-                <div className="border border-[#60a5fa] rounded-lg p-5 mb-8 bg-[#ffffff]">
-                  <div className="grid grid-cols-2 gap-y-6 gap-x-4 text-sm">
+                <div className="border border-[#60a5fa] rounded-lg p-4 mb-5 bg-[#ffffff]">
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-4 text-sm">
                     <div>
                       <div className="text-[#9ca3af] text-xs font-semibold tracking-wider uppercase mb-1">Guest Name</div>
                       <div className="font-semibold text-[#1f2937] text-base">{data.guestName || "—"}</div>
@@ -453,8 +453,8 @@ export default function InvoiceGenerator() {
                 </div>
 
                 {/* Totals Box */}
-                <div className="border-x border-b border-[#60a5fa] rounded-b-lg p-5 mb-8 bg-[#ffffff]">
-                  <div className="w-full flex justify-between items-center py-2 border-b border-[#f3f4f6]">
+                <div className="border-x border-b border-[#60a5fa] rounded-b-lg p-4 mb-5 bg-[#ffffff]">
+                  <div className="w-full flex justify-between items-center py-1.5 border-b border-[#f3f4f6]">
                     <span className="text-sm font-semibold text-[#4b5563]">SUB TOTAL:</span>
                     <span className="font-semibold text-[#111827]">₹{calculations.subTotal}</span>
                   </div>
@@ -465,12 +465,12 @@ export default function InvoiceGenerator() {
                     </div>
                   )}
                   {Number(data.taxPercent) > 0 && (
-                    <div className="w-full flex justify-between items-center py-2 border-b border-[#f3f4f6]">
+                    <div className="w-full flex justify-between items-center py-1.5 border-b border-[#f3f4f6]">
                       <span className="text-sm font-semibold text-[#4b5563]">TAX / GST ({data.taxPercent}%):</span>
                       <span className="font-semibold text-[#111827]">₹{Math.round(Math.max(0, calculations.subTotal - Number(data.discount)) * (Number(data.taxPercent) / 100))}</span>
                     </div>
                   )}
-                  <div className="w-full flex justify-between items-center py-3 border-b border-[#f3f4f6]">
+                  <div className="w-full flex justify-between items-center py-2 border-b border-[#f3f4f6]">
                     <span className="text-base font-bold text-[#1f2937]">TOTAL:</span>
                     <span className="text-lg font-bold text-[#111827]">₹{calculations.total}</span>
                   </div>
@@ -479,19 +479,19 @@ export default function InvoiceGenerator() {
                     <div className="text-sm text-[#1f2937] italic mt-0.5">{calculations.totalWords}</div>
                   </div>
                   {Number(data.amountPaid) > 0 && (
-                    <div className="w-full flex justify-between items-center py-3 border-b border-[#f3f4f6] text-[#16a34a]">
+                    <div className="w-full flex justify-between items-center py-2 border-b border-[#f3f4f6] text-[#16a34a]">
                       <span className="text-sm font-semibold">AMOUNT PAID:</span>
                       <span className="font-semibold">₹{calculations.paid}</span>
                     </div>
                   )}
-                  <div className="w-full flex justify-between items-center pt-3 mt-1">
+                  <div className="w-full flex justify-between items-center pt-2 mt-1">
                     <span className="text-lg font-bold text-[#ea580c]">PENDING:</span>
                     <span className="text-xl font-bold text-[#ea580c]">₹{calculations.pending}</span>
                   </div>
                 </div>
 
                 {/* Support Info */}
-                <div className="border border-[#fed7aa] rounded-lg p-4 mb-8 bg-[#fff7ed]/30 flex flex-col items-center justify-center text-sm">
+                <div className="border border-[#fed7aa] rounded-lg p-3 mb-5 bg-[#fff7ed]/30 flex flex-col items-center justify-center text-sm">
                   <div className="text-[#ea580c] font-bold mb-2">TRILOKI DIVINE JOURNEY - Customer Support</div>
                   <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center text-[#4b5563] text-xs">
                     <div className="flex items-center gap-1.5"><span className="text-[#60a5fa]">🌐</span> www.trilokigroup.com</div>
@@ -501,8 +501,8 @@ export default function InvoiceGenerator() {
                 </div>
 
                 {/* Notes */}
-                <div className="bg-[#f8fafc] rounded-lg p-5 text-xs text-[#4b5563] whitespace-pre-line leading-relaxed">
-                  <div className="font-semibold text-[#9ca3af] tracking-wider mb-2 uppercase">Notes & Banking Details</div>
+                <div className="bg-[#f8fafc] rounded-lg p-4 text-[11px] text-[#4b5563] whitespace-pre-line leading-normal">
+                  <div className="font-semibold text-[#9ca3af] tracking-wider mb-2 uppercase text-xs">Notes & Banking Details</div>
                   {data.notes}
                 </div>
 
