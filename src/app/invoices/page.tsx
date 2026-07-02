@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Plus, Trash2, Download } from "lucide-react";
+import { Plus, Trash2, Download, Loader2 } from "lucide-react";
 
 // Helper for Indian number to words
 function numberToWords(num: number): string {
@@ -23,6 +23,7 @@ function numberToWords(num: number): string {
 }
 
 export default function InvoiceGenerator() {
+  const [isDownloading, setIsDownloading] = useState(false);
   const [data, setData] = useState({
     companySettings: "Triloki Divine Journey",
     invoiceNumber: "INV-00001",
@@ -80,21 +81,33 @@ export default function InvoiceGenerator() {
   }, [data.packages, data.discount, data.taxPercent, data.amountPaid]);
 
   const handleDownload = async () => {
-    const element = document.getElementById("pdf-content");
-    if (!element) return;
-    
-    // Dynamic import of html2pdf to prevent SSR window is not defined errors
-    const html2pdf = (await import("html2pdf.js")).default;
-    
-    const opt = {
-      margin: 0,
-      filename: `Invoice_${data.invoiceNumber || "Triloki"}.pdf`,
-      image: { type: "jpeg" as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const }
-    };
+    try {
+      setIsDownloading(true);
+      const element = document.getElementById("pdf-content");
+      if (!element) {
+        alert("Could not find the invoice content to download.");
+        setIsDownloading(false);
+        return;
+      }
+      
+      // Use require for better compatibility in Next.js client components
+      const html2pdf = require("html2pdf.js");
+      
+      const opt = {
+        margin: 0,
+        filename: `Invoice_${data.invoiceNumber || "Triloki"}.pdf`,
+        image: { type: "jpeg" as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const }
+      };
 
-    html2pdf().set(opt).from(element).save();
+      await html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -334,8 +347,13 @@ export default function InvoiceGenerator() {
         {/* Controls Toolbar */}
         <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-100">
           <h2 className="font-semibold text-gray-700">Live Preview</h2>
-          <button onClick={handleDownload} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-md font-medium text-sm hover:bg-orange-600 transition-colors shadow-sm cursor-pointer">
-            <Download size={16} /> Download PDF
+          <button 
+            onClick={handleDownload} 
+            disabled={isDownloading}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-md font-medium text-sm hover:bg-orange-600 transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
+            {isDownloading ? "Generating PDF..." : "Download PDF"}
           </button>
         </div>
         
