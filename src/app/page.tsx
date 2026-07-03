@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
 import { 
   FileText, 
   Hotel, 
@@ -11,6 +14,39 @@ import {
 import Link from "next/link";
 
 export default function Dashboard() {
+  const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
+  const [stats, setStats] = useState({ invoices: 0, hotels: 0, transport: 0, revenue: 0 });
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      // Fetch recent invoices with client names
+      const { data: invoices } = await supabase
+        .from("invoices")
+        .select("id, invoice_number, total_amount, created_at, clients(name)")
+        .order("created_at", { ascending: false })
+        .limit(5);
+        
+      if (invoices) setRecentInvoices(invoices);
+
+      // Fetch basic stats
+      const { count: invoiceCount } = await supabase.from("invoices").select("*", { count: "exact", head: true });
+      const { count: hotelCount } = await supabase.from("vouchers").select("*", { count: "exact", head: true }).eq("voucher_type", "hotel");
+      const { count: transportCount } = await supabase.from("vouchers").select("*", { count: "exact", head: true }).eq("voucher_type", "transport");
+      
+      const { data: allInvoices } = await supabase.from("invoices").select("total_amount");
+      const totalRevenue = allInvoices?.reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0) || 0;
+
+      setStats({
+        invoices: invoiceCount || 0,
+        hotels: hotelCount || 0,
+        transport: transportCount || 0,
+        revenue: totalRevenue
+      });
+    };
+    
+    fetchDashboardData();
+  }, []);
+
   const handleExport = () => {
     const csvContent = "data:text/csv;charset=utf-8," 
       + "Invoice ID,Client,Date,Amount,Status\\n"
@@ -48,19 +84,18 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Stats Cards */}
         {[
-          { label: "Total Invoices", value: "1,248", change: "+12%", icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Hotel Vouchers", value: "384", change: "+5%", icon: Hotel, color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "Transport Vouchers", value: "592", change: "+18%", icon: Car, color: "text-purple-600", bg: "bg-purple-50" },
-          { label: "Total Revenue", value: "₹4.2M", change: "+24%", icon: TrendingUp, color: "text-orange-600", bg: "bg-orange-50" },
+          { label: "Total Invoices", value: stats.invoices.toString(), change: "Active", icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
+          { label: "Hotel Vouchers", value: stats.hotels.toString(), change: "Active", icon: Hotel, color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: "Transport Vouchers", value: stats.transport.toString(), change: "Active", icon: Car, color: "text-purple-600", bg: "bg-purple-50" },
+          { label: "Total Revenue", value: `₹${stats.revenue.toLocaleString()}`, change: "Total", icon: TrendingUp, color: "text-orange-600", bg: "bg-orange-50" },
         ].map((stat, i) => (
           <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow group">
             <div className="flex items-start justify-between">
               <div className={`p-3 rounded-xl transition-colors duration-300 ${stat.bg} group-hover:bg-white group-hover:shadow-sm`}>
                 <stat.icon className={`w-6 h-6 ${stat.color}`} />
               </div>
-              <span className="flex items-center text-sm font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+              <span className="flex items-center text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
                 {stat.change}
-                <ArrowUpRight className="w-3 h-3 ml-1" />
               </span>
             </div>
             <div className="mt-4">
@@ -89,28 +124,25 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="text-sm">
-                {[
-                  { id: "INV-2026-001", client: "Acme Corp", date: "May 28, 2026", amount: "₹45,000", status: "Paid" },
-                  { id: "INV-2026-002", client: "Globex Inc", date: "May 27, 2026", amount: "₹12,500", status: "Pending" },
-                  { id: "INV-2026-003", client: "Stark Industries", date: "May 25, 2026", amount: "₹89,000", status: "Paid" },
-                  { id: "INV-2026-004", client: "Wayne Enterprises", date: "May 24, 2026", amount: "₹34,200", status: "Overdue" },
-                ].map((row, i) => (
-                  <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
-                    <td className="py-4 font-medium text-gray-900">{row.id}</td>
-                    <td className="py-4 text-gray-600">{row.client}</td>
-                    <td className="py-4 text-gray-500">{row.date}</td>
-                    <td className="py-4 font-medium text-gray-900">{row.amount}</td>
-                    <td className="py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium
-                        ${row.status === 'Paid' ? 'bg-emerald-50 text-emerald-600' : 
-                          row.status === 'Pending' ? 'bg-amber-50 text-amber-600' : 
-                          'bg-red-50 text-red-600'}`}
-                      >
-                        {row.status}
-                      </span>
-                    </td>
+                {recentInvoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-gray-500">No invoices saved yet. Create one to see it here!</td>
                   </tr>
-                ))}
+                ) : (
+                  recentInvoices.map((inv, i) => (
+                    <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
+                      <td className="py-4 font-medium text-gray-900">{inv.invoice_number}</td>
+                      <td className="py-4 text-gray-600">{inv.clients?.name || "Unknown"}</td>
+                      <td className="py-4 text-gray-500">{new Date(inv.created_at).toLocaleDateString()}</td>
+                      <td className="py-4 font-medium text-gray-900">₹{inv.total_amount}</td>
+                      <td className="py-4">
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600">
+                          Saved
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { supabase } from "@/lib/supabase";
 
 export default function HotelVouchers() {
   const [isDownloading, setIsDownloading] = useState(false);
@@ -33,6 +34,19 @@ export default function HotelVouchers() {
         alert("Could not find the content to download.");
         setIsDownloading(false);
         return;
+      }
+
+      // Save to Supabase Cloud
+      try {
+        if (data.guestName) {
+          await supabase.from("vouchers").insert({
+            voucher_type: "hotel",
+            guest_name: data.guestName,
+            document_data: data
+          });
+        }
+      } catch (dbError) {
+        console.error("Failed to save to database:", dbError);
       }
 
       const html2canvasModule = await import("html2canvas-pro");

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Plus, Trash2, Download, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 // Helper for Indian number to words
 function numberToWords(num: number): string {
@@ -88,6 +89,40 @@ export default function InvoiceGenerator() {
         alert("Could not find the invoice content to download.");
         setIsDownloading(false);
         return;
+      }
+      
+      // Save to Supabase Cloud
+      try {
+        if (data.guestName) {
+          let clientId = null;
+          
+          if (data.guestPhone) {
+            const { data: existingClient } = await supabase.from("clients").select("id").eq("phone", data.guestPhone).single();
+            if (existingClient) {
+              clientId = existingClient.id;
+            }
+          }
+          
+          if (!clientId) {
+            const { data: newClient } = await supabase.from("clients").insert({
+              name: data.guestName,
+              phone: data.guestPhone || "",
+              email: data.guestEmail || "",
+              gst_number: data.guestGst || ""
+            }).select().single();
+            clientId = newClient?.id;
+          }
+
+          await supabase.from("invoices").insert({
+            invoice_number: data.invoiceNumber || "DRAFT",
+            client_id: clientId,
+            total_amount: calculations.total,
+            document_data: data
+          });
+        }
+      } catch (dbError) {
+        console.error("Failed to save to database:", dbError);
+        // Continue downloading PDF even if saving fails
       }
       
       const html2canvasModule = await import("html2canvas-pro");
