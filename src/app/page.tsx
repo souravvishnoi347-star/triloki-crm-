@@ -9,7 +9,8 @@ import {
   Car, 
   TrendingUp, 
   Users, 
-  ArrowUpRight 
+  ArrowUpRight,
+  Map
 } from "lucide-react";
 import Link from "next/link";
 
@@ -154,9 +155,10 @@ export default function Dashboard() {
           </div>
           <div className="space-y-3">
             {[
+              { label: "New Itinerary Builder", icon: Map, color: "text-blue-600", bg: "bg-blue-50", href: "/itinerary-builder" },
               { label: "New Hotel Voucher", icon: Hotel, color: "text-emerald-600", bg: "bg-emerald-50", href: "/hotels" },
               { label: "New Transport Voucher", icon: Car, color: "text-purple-600", bg: "bg-purple-50", href: "/transport" },
-              { label: "Add Client", icon: Users, color: "text-blue-600", bg: "bg-blue-50", href: "#" },
+              { label: "Add Client", icon: Users, color: "text-orange-600", bg: "bg-orange-50", href: "#" },
             ].map((action, i) => (
               <Link key={i} href={action.href} className="w-full flex items-center gap-4 p-3 rounded-xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50/50 transition-all group text-left block">
                 <div className={`p-2 rounded-lg ${action.bg} group-hover:bg-white`}>
