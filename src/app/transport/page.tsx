@@ -93,13 +93,13 @@ export default function TransportVouchers() {
   };
 
   const handleShareWhatsApp = () => {
-    if (!data.managerPhone) {
+    if (!data.managerMobile) {
       alert("Please enter the Manager Mobile No. to share via WhatsApp.");
       return;
     }
-    const message = `Dear ${data.guestName.split('X')[0].trim()},\n\nPlease find attached your Transport Voucher & Itinerary.\nVehicle: ${data.vehicleType}\nArrival: ${data.arrivalDate} at ${data.arrivalLocation}\nDeparture: ${data.departureDate} at ${data.departureLocation}\n\nThank you for choosing Triloki Divine Journey!`;
+    const message = `Dear ${data.guestName.split('X')[0].trim()},\n\nPlease find attached your Transport Voucher & Itinerary.\nVehicle: ${data.vehicleType}\nArrival: ${data.arrivalDate}\nDeparture: ${data.departureDate}\n\nThank you for choosing Triloki Divine Journey!`;
     const encodedMessage = encodeURIComponent(message);
-    const phone = data.managerPhone.replace(/\D/g, ""); 
+    const phone = data.managerMobile.replace(/\D/g, ""); 
     window.open(`https://wa.me/${phone}?text=${encodedMessage}`, "_blank");
   };
 

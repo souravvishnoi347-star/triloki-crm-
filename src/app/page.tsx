@@ -14,7 +14,8 @@ import {
   IndianRupee,
   Activity,
   Clock,
-  Loader2
+  Loader2,
+  Plus
 } from "lucide-react";
 import Link from "next/link";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
