@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Plus, Trash2, Download, Loader2 } from "lucide-react";
+import { Plus, Trash2, Download, Loader2, MessageCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 // Helper for Indian number to words
@@ -146,6 +146,17 @@ export default function InvoiceGenerator() {
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  const handleShareWhatsApp = () => {
+    if (!data.guestPhone) {
+      alert("Please enter a guest phone number to share via WhatsApp.");
+      return;
+    }
+    const message = `Dear ${data.guestName},\n\nPlease find attached your invoice from Triloki Divine Journey.\nInvoice No: ${data.invoiceNumber || "DRAFT"}\nTotal Amount: ₹${calculations.total}\n\nThank you for choosing us!`;
+    const encodedMessage = encodeURIComponent(message);
+    const phone = data.guestPhone.replace(/\D/g, ""); // Clean non-numeric characters
+    window.open(`https://wa.me/${phone}?text=${encodedMessage}`, "_blank");
   };
 
   return (
@@ -385,14 +396,23 @@ export default function InvoiceGenerator() {
         {/* Controls Toolbar */}
         <div className="flex justify-between items-center bg-[#ffffff] p-4 rounded-lg shadow-sm border border-[#f3f4f6]">
           <h2 className="font-semibold text-[#374151]">Live Preview</h2>
-          <button 
-            onClick={handleDownload} 
-            disabled={isDownloading}
-            className="flex items-center gap-2 px-4 py-2 bg-[#f97316] text-[#ffffff] rounded-md font-medium text-sm hover:bg-orange-600 transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
-            {isDownloading ? "Generating PDF..." : "Download PDF"}
-          </button>
+          <div className="flex gap-3">
+            <button 
+              onClick={handleShareWhatsApp} 
+              className="flex items-center gap-2 px-4 py-2 bg-green-500 text-[#ffffff] rounded-md font-medium text-sm hover:bg-green-600 transition-colors shadow-sm cursor-pointer"
+            >
+              <MessageCircle size={16} /> 
+              WhatsApp
+            </button>
+            <button 
+              onClick={handleDownload} 
+              disabled={isDownloading}
+              className="flex items-center gap-2 px-4 py-2 bg-[#f97316] text-[#ffffff] rounded-md font-medium text-sm hover:bg-orange-600 transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
+              {isDownloading ? "Generating PDF..." : "Download PDF"}
+            </button>
+          </div>
         </div>
         
         {/* Step B: Scrollable Area */}

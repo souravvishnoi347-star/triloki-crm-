@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, MessageCircle } from "lucide-react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 
@@ -70,6 +70,14 @@ export default function HotelVouchers() {
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  const handleShareWhatsApp = () => {
+    // In a real app we'd need a guest phone input field for vouchers, but we can just open it blank or use contactNo.
+    // The hotel voucher has `contactNo` (which is hotel's number), but no guest phone. We will just open a blank chat.
+    const message = `Dear ${data.guestName.split('X')[0].trim()},\n\nPlease find attached your Hotel Voucher for ${data.hotelName}.\nCheck In: ${data.checkIn}\nCheck Out: ${data.checkOut}\n\nThank you for choosing Triloki Divine Journey!`;
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/?text=${encodedMessage}`, "_blank");
   };
 
   return (
@@ -176,14 +184,23 @@ export default function HotelVouchers() {
         {/* Controls Toolbar */}
         <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-100 shrink-0">
           <h2 className="font-semibold text-gray-700">Live Preview</h2>
-          <button 
-            onClick={handleDownload} 
-            disabled={isDownloading}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-md font-medium text-sm hover:bg-orange-600 transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
-            {isDownloading ? "Generating PDF..." : "Download PDF"}
-          </button>
+          <div className="flex gap-3">
+            <button 
+              onClick={handleShareWhatsApp} 
+              className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md font-medium text-sm hover:bg-green-600 transition-colors shadow-sm cursor-pointer"
+            >
+              <MessageCircle size={16} /> 
+              WhatsApp
+            </button>
+            <button 
+              onClick={handleDownload} 
+              disabled={isDownloading}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-md font-medium text-sm hover:bg-orange-600 transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
+              {isDownloading ? "Generating PDF..." : "Download PDF"}
+            </button>
+          </div>
         </div>
         
         {/* Step B: Scrollable Area */}
