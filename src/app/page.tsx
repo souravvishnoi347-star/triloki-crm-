@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-
 import { 
   FileText, 
   Hotel, 
@@ -11,165 +10,256 @@ import {
   Users, 
   ArrowUpRight,
   Map,
-  Store
+  Store,
+  IndianRupee,
+  Activity,
+  Clock,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+type DashboardStats = {
+  activeLeads: number;
+  confirmedRevenue: number;
+  pendingPayables: number;
+  totalItineraries: number;
+  leadsByStage: { name: string; count: number; fill: string }[];
+  recentActivity: any[];
+};
+
+const STAGE_COLORS: Record<string, string> = {
+  new_inquiry: "#3b82f6", // blue
+  quoted: "#a855f7", // purple
+  follow_up: "#f59e0b", // amber
+  confirmed: "#10b981", // emerald
+  lost: "#ef4444" // red
+};
+
+const STAGE_LABELS: Record<string, string> = {
+  new_inquiry: "New Inquiry",
+  quoted: "Quoted",
+  follow_up: "Follow Up",
+  confirmed: "Confirmed",
+  lost: "Lost"
+};
 
 export default function Dashboard() {
-  const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
-  const [stats, setStats] = useState({ invoices: 0, hotels: 0, transport: 0, revenue: 0 });
+  const [stats, setStats] = useState<DashboardStats>({
+    activeLeads: 0,
+    confirmedRevenue: 0,
+    pendingPayables: 0,
+    totalItineraries: 0,
+    leadsByStage: [],
+    recentActivity: []
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      // Fetch recent invoices with client names
-      const { data: invoices } = await supabase
-        .from("invoices")
-        .select("id, invoice_number, total_amount, created_at, clients(name)")
-        .order("created_at", { ascending: false })
-        .limit(5);
+    async function fetchDashboardData() {
+      try {
+        // 1. Fetch all leads
+        const { data: leads } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
         
-      if (invoices) setRecentInvoices(invoices);
+        // 2. Fetch payables
+        const { data: payables } = await supabase.from("payables").select("amount, status");
+        
+        // 3. Fetch itineraries
+        const { count: itineraryCount } = await supabase.from("itineraries").select("*", { count: "exact", head: true });
 
-      // Fetch basic stats
-      const { count: invoiceCount } = await supabase.from("invoices").select("*", { count: "exact", head: true });
-      const { count: hotelCount } = await supabase.from("vouchers").select("*", { count: "exact", head: true }).eq("voucher_type", "hotel");
-      const { count: transportCount } = await supabase.from("vouchers").select("*", { count: "exact", head: true }).eq("voucher_type", "transport");
-      
-      const { data: allInvoices } = await supabase.from("invoices").select("total_amount");
-      const totalRevenue = allInvoices?.reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0) || 0;
+        if (leads) {
+          const activeLeads = leads.filter(l => l.status !== "lost").length;
+          const confirmedRevenue = leads.filter(l => l.status === "confirmed").reduce((sum, l) => sum + Number(l.budget || 0), 0);
+          
+          // Calculate chart data
+          const stageCounts: Record<string, number> = { new_inquiry: 0, quoted: 0, follow_up: 0, confirmed: 0, lost: 0 };
+          leads.forEach(l => {
+            const st = l.status || "new_inquiry";
+            if (stageCounts[st] !== undefined) stageCounts[st]++;
+          });
+          
+          const chartData = Object.keys(stageCounts).map(key => ({
+            name: STAGE_LABELS[key],
+            count: stageCounts[key],
+            fill: STAGE_COLORS[key]
+          }));
 
-      setStats({
-        invoices: invoiceCount || 0,
-        hotels: hotelCount || 0,
-        transport: transportCount || 0,
-        revenue: totalRevenue
-      });
-    };
-    
+          const pendingPayables = (payables || []).filter(p => p.status === 'pending').reduce((sum, p) => sum + Number(p.amount), 0);
+
+          setStats({
+            activeLeads,
+            confirmedRevenue,
+            pendingPayables,
+            totalItineraries: itineraryCount || 0,
+            leadsByStage: chartData,
+            recentActivity: leads.slice(0, 5) // Top 5 recent leads
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching dashboard stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     fetchDashboardData();
   }, []);
 
-  const handleExport = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "Invoice ID,Client,Date,Amount,Status\\n"
-      + "INV-2026-001,Acme Corp,May 28 2026,45000,Paid\\n"
-      + "INV-2026-002,Globex Inc,May 27 2026,12500,Pending\\n"
-      + "INV-2026-003,Stark Industries,May 25 2026,89000,Paid\\n"
-      + "INV-2026-004,Wayne Enterprises,May 24 2026,34200,Overdue";
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "triloki_invoices_export.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <Loader2 className="animate-spin text-orange-500" size={48} />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Welcome Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1">Welcome back to Triloki Group CRM.</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Business Overview</h1>
+          <p className="text-gray-500 mt-1 text-sm">Welcome back to Triloki CRM. Here's what's happening today.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={handleExport} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm cursor-pointer">
-            Export Data
-          </button>
-          <Link href="/invoices" className="px-4 py-2 flex items-center justify-center bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors shadow-md shadow-orange-600/20">
-            Create Invoice
-          </Link>
-        </div>
-      </header>
+        <Link href="/leads" className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg font-medium text-sm hover:bg-orange-600 transition-colors shadow-sm w-fit">
+          <Plus size={16} /> New Lead
+        </Link>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Stats Cards */}
-        {[
-          { label: "Total Invoices", value: stats.invoices.toString(), change: "Active", icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Hotel Vouchers", value: stats.hotels.toString(), change: "Active", icon: Hotel, color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "Transport Vouchers", value: stats.transport.toString(), change: "Active", icon: Car, color: "text-purple-600", bg: "bg-purple-50" },
-          { label: "Total Revenue", value: `₹${stats.revenue.toLocaleString()}`, change: "Total", icon: TrendingUp, color: "text-orange-600", bg: "bg-orange-50" },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow group">
-            <div className="flex items-start justify-between">
-              <div className={`p-3 rounded-xl transition-colors duration-300 ${stat.bg} group-hover:bg-white group-hover:shadow-sm`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
-              </div>
-              <span className="flex items-center text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                {stat.change}
-              </span>
-            </div>
-            <div className="mt-4">
-              <h3 className="text-gray-500 text-sm font-medium">{stat.label}</h3>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{stat.value}</p>
-            </div>
+      {/* Top Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stat 1 */}
+        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center gap-4 group hover:border-blue-200 transition-colors">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Users size={24} />
           </div>
-        ))}
+          <div>
+            <p className="text-sm font-medium text-gray-500 mb-0.5">Active Leads</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.activeLeads}</p>
+          </div>
+        </div>
+
+        {/* Stat 2 */}
+        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center gap-4 group hover:border-emerald-200 transition-colors">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <TrendingUp size={24} />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500 mb-0.5">Confirmed Revenue</p>
+            <p className="text-2xl font-bold text-gray-900">₹{stats.confirmedRevenue.toLocaleString()}</p>
+          </div>
+        </div>
+
+        {/* Stat 3 */}
+        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center gap-4 group hover:border-red-200 transition-colors">
+          <div className="w-12 h-12 rounded-xl bg-red-50 text-red-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Store size={24} />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500 mb-0.5">Pending Payables</p>
+            <p className="text-2xl font-bold text-gray-900">₹{stats.pendingPayables.toLocaleString()}</p>
+          </div>
+        </div>
+
+        {/* Stat 4 */}
+        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center gap-4 group hover:border-purple-200 transition-colors">
+          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Map size={24} />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500 mb-0.5">Total Itineraries</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.totalItineraries}</p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-gray-900">Recent Invoices</h2>
-            <button className="text-sm font-medium text-orange-600 hover:text-orange-700">View All</button>
+        {/* Main Chart Column (2/3 width) */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+            <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <Activity className="text-orange-500" size={20} /> Leads Pipeline Distribution
+            </h2>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.leadsByStage} margin={{ top: 5, right: 30, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
+                  <Tooltip 
+                    cursor={{fill: '#f9fafb'}}
+                    contentStyle={{borderRadius: '8px', border: '1px solid #f3f4f6', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                  />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-gray-100 text-sm text-gray-500">
-                  <th className="pb-3 font-medium">Invoice ID</th>
-                  <th className="pb-3 font-medium">Client</th>
-                  <th className="pb-3 font-medium">Date</th>
-                  <th className="pb-3 font-medium">Amount</th>
-                  <th className="pb-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {recentInvoices.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-8 text-center text-gray-500">No invoices saved yet. Create one to see it here!</td>
-                  </tr>
-                ) : (
-                  recentInvoices.map((inv, i) => (
-                    <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
-                      <td className="py-4 font-medium text-gray-900">{inv.invoice_number}</td>
-                      <td className="py-4 text-gray-600">{inv.clients?.name || "Unknown"}</td>
-                      <td className="py-4 text-gray-500">{new Date(inv.created_at).toLocaleDateString()}</td>
-                      <td className="py-4 font-medium text-gray-900">₹{inv.total_amount}</td>
-                      <td className="py-4">
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600">
-                          Saved
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+
+          {/* Quick Actions (Moved below chart) */}
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {[
+                { label: "New Itinerary", icon: Map, color: "text-blue-600", bg: "bg-blue-50", href: "/itinerary-builder" },
+                { label: "New Invoice", icon: FileText, color: "text-orange-600", bg: "bg-orange-50", href: "/invoices" },
+                { label: "New Hotel Voucher", icon: Hotel, color: "text-emerald-600", bg: "bg-emerald-50", href: "/hotels" },
+                { label: "New Transport", icon: Car, color: "text-purple-600", bg: "bg-purple-50", href: "/transport" },
+                { label: "Lead Pipeline", icon: Users, color: "text-cyan-600", bg: "bg-cyan-50", href: "/leads" },
+                { label: "Payables Ledger", icon: Store, color: "text-red-600", bg: "bg-red-50", href: "/vendors" },
+              ].map((action, i) => (
+                <Link key={i} href={action.href} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50/50 transition-all group">
+                  <div className={`p-2 rounded-lg ${action.bg} group-hover:bg-white`}>
+                    <action.icon size={20} className={action.color} />
+                  </div>
+                  <span className="font-medium text-gray-700 text-sm group-hover:text-orange-700">{action.label}</span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-gray-900">Quick Actions</h2>
-          </div>
-          <div className="space-y-3">
-            {[
-              { label: "New Itinerary Builder", icon: Map, color: "text-blue-600", bg: "bg-blue-50", href: "/itinerary-builder" },
-              { label: "New Hotel Voucher", icon: Hotel, color: "text-emerald-600", bg: "bg-emerald-50", href: "/hotels" },
-              { label: "New Transport Voucher", icon: Car, color: "text-purple-600", bg: "bg-purple-50", href: "/transport" },
-              { label: "Lead Pipeline", icon: Users, color: "text-orange-600", bg: "bg-orange-50", href: "/leads" },
-              { label: "Vendors & Payables", icon: Store, color: "text-red-600", bg: "bg-red-50", href: "/vendors" },
-            ].map((action, i) => (
-              <Link key={i} href={action.href} className="w-full flex items-center gap-4 p-3 rounded-xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50/50 transition-all group text-left block">
-                <div className={`p-2 rounded-lg ${action.bg} group-hover:bg-white`}>
-                  <action.icon className={`w-5 h-5 ${action.color}`} />
+        {/* Right Column (1/3 width) - Recent Activity */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
+          <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <Clock className="text-orange-500" size={20} /> Recent Leads
+          </h2>
+          
+          <div className="flex-1 space-y-4">
+            {stats.recentActivity.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-8">No recent activity found.</p>
+            ) : (
+              stats.recentActivity.map((lead, i) => (
+                <div key={i} className="flex gap-4 group">
+                  <div className="flex flex-col items-center">
+                    <div className="w-2.5 h-2.5 rounded-full bg-orange-500 mt-1.5 shrink-0" />
+                    {i !== stats.recentActivity.length - 1 && (
+                      <div className="w-px h-full bg-gray-100 my-1 group-hover:bg-orange-200 transition-colors" />
+                    )}
+                  </div>
+                  <div className="pb-4">
+                    <p className="text-sm font-semibold text-gray-900">{lead.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5">
+                      <span className={`w-1.5 h-1.5 rounded-full inline-block ${
+                        lead.status === 'confirmed' ? 'bg-emerald-500' :
+                        lead.status === 'lost' ? 'bg-red-500' :
+                        lead.status === 'follow_up' ? 'bg-amber-500' :
+                        lead.status === 'quoted' ? 'bg-purple-500' : 'bg-blue-500'
+                      }`} />
+                      {STAGE_LABELS[lead.status] || 'New Inquiry'}
+                    </p>
+                    {lead.destination && (
+                      <p className="text-xs text-gray-400 mt-1 truncate max-w-[200px]">Dest: {lead.destination}</p>
+                    )}
+                  </div>
                 </div>
-                <span className="font-medium text-sm text-gray-700 group-hover:text-gray-900">{action.label}</span>
-              </Link>
-            ))}
+              ))
+            )}
           </div>
+          
+          <Link href="/leads" className="w-full mt-4 flex items-center justify-center gap-1 py-2.5 bg-gray-50 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100 hover:text-gray-900 transition-colors">
+            View All Leads <ArrowUpRight size={16} />
+          </Link>
         </div>
       </div>
     </div>
