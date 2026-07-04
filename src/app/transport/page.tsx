@@ -97,7 +97,7 @@ export default function TransportVouchers() {
       alert("Please enter the Manager Mobile No. to share via WhatsApp.");
       return;
     }
-    const message = `Dear ${data.guestName.split('X')[0].trim()},\n\nPlease find attached your Transport Voucher & Itinerary.\nVehicle: ${data.vehicleType}\nArrival: ${data.arrivalDate}\nDeparture: ${data.departureDate}\n\nThank you for choosing Triloki Divine Journey!`;
+    const message = `Dear ${data.guestName.split('X')[0].trim()},\n\nPlease find attached your Transport Voucher & Itinerary.\nVehicle: ${data.vehicleType}\nArrival: ${data.arrivalDate}\nDeparture: ${data.departureDate}\n\nThank you for choosing Triloki Group!`;
     const encodedMessage = encodeURIComponent(message);
     const phone = data.managerMobile.replace(/\D/g, ""); 
     window.open(`https://wa.me/${phone}?text=${encodedMessage}`, "_blank");

@@ -238,7 +238,7 @@ export default function ItineraryBuilder() {
                 <div className="flex justify-between items-start relative z-10">
                   <div>
                     <h1 className="text-4xl font-bold tracking-tight mb-2 uppercase leading-tight max-w-[80%]">{data.title}</h1>
-                    <p className="text-[#93c5fd] font-medium tracking-wide">TRILOKI DIVINE JOURNEY</p>
+                    <p className="text-[#93c5fd] font-medium tracking-wide">Triloki Group</p>
                   </div>
                   <div className="w-20 h-20 bg-[#ffffff] rounded-lg flex items-center justify-center p-1 shadow-lg shrink-0">
                     <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
@@ -286,8 +286,8 @@ export default function ItineraryBuilder() {
               {/* Footer */}
               <div className="bg-[#f8fafc] p-6 border-t border-[#e5e7eb] flex justify-between items-center text-xs text-[#6b7280]">
                 <div>
-                  <strong>Triloki Divine Journey</strong><br />
-                  www.trilokigroup.com | +91 84452 14371
+                  <strong>Triloki Group</strong><br />
+                  www.trilokigroup.in | +91 84452 14371
                 </div>
                 <div className="text-right italic">
                   Thank you for choosing us for your travels!

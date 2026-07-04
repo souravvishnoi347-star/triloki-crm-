@@ -100,7 +100,7 @@ export function Sidebar() {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-gray-900">Admin User</span>
-              <span className="text-xs text-gray-500">admin@trilokigroup.com</span>
+              <span className="text-xs text-gray-500">admin@trilokigroup.in</span>
             </div>
           </div>
         </div>

@@ -26,7 +26,7 @@ function numberToWords(num: number): string {
 export default function InvoiceGenerator() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [data, setData] = useState({
-    companySettings: "Triloki Divine Journey",
+    companySettings: "Triloki Group",
     invoiceNumber: "INV-00001",
     guestName: "",
     guestPhone: "",
@@ -153,7 +153,7 @@ export default function InvoiceGenerator() {
       alert("Please enter a guest phone number to share via WhatsApp.");
       return;
     }
-    const message = `Dear ${data.guestName},\n\nPlease find attached your invoice from Triloki Divine Journey.\nInvoice No: ${data.invoiceNumber || "DRAFT"}\nTotal Amount: ₹${calculations.total}\n\nThank you for choosing us!`;
+    const message = `Dear ${data.guestName},\n\nPlease find attached your invoice from Triloki Group.\nInvoice No: ${data.invoiceNumber || "DRAFT"}\nTotal Amount: ₹${calculations.total}\n\nThank you for choosing us!`;
     const encodedMessage = encodeURIComponent(message);
     const phone = data.guestPhone.replace(/\D/g, ""); // Clean non-numeric characters
     window.open(`https://wa.me/${phone}?text=${encodedMessage}`, "_blank");
@@ -176,7 +176,7 @@ export default function InvoiceGenerator() {
                 value={data.companySettings}
                 onChange={e => setData({...data, companySettings: e.target.value})}
               >
-                <option value="Triloki Divine Journey">Triloki Divine Journey</option>
+                <option value="Triloki Group">Triloki Group</option>
               </select>
             </div>
           </div>
@@ -425,7 +425,7 @@ export default function InvoiceGenerator() {
               {/* Invoice Header (Step E: No absolute positioning) */}
               <div className="bg-[#f97316] p-6 flex justify-between items-center text-[#ffffff] w-full block">
                 <div>
-                  <h1 className="text-3xl font-bold tracking-wider mb-1">TRILOKI DIVINE JOURNEY</h1>
+                  <h1 className="text-3xl font-bold tracking-wider mb-1">Triloki Group</h1>
                   <p className="text-[#ffedd5] text-sm">Managed by Triloki Hospitality</p>
                 </div>
                 <div className="w-24 h-24 bg-[#ffffff] rounded-xl flex items-center justify-center shadow-md overflow-hidden border-2 border-[#ffffff]/50">
@@ -547,9 +547,9 @@ export default function InvoiceGenerator() {
 
                 {/* Support Info */}
                 <div className="border border-[#fed7aa] rounded-lg p-3 mb-5 bg-[#fff7ed]/30 flex flex-col items-center justify-center text-sm">
-                  <div className="text-[#ea580c] font-bold mb-2">TRILOKI DIVINE JOURNEY - Customer Support</div>
+                  <div className="text-[#ea580c] font-bold mb-2">Triloki Group - Customer Support</div>
                   <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center text-[#4b5563] text-xs">
-                    <div className="flex items-center gap-1.5"><span className="text-[#60a5fa]">🌐</span> www.trilokigroup.com</div>
+                    <div className="flex items-center gap-1.5"><span className="text-[#60a5fa]">🌐</span> www.trilokigroup.in</div>
                     <div className="flex items-center gap-1.5"><span className="text-[#c084fc]">✉️</span> hospitality.triloki@gmail.com</div>
                     <div className="flex items-center gap-1.5"><span className="text-[#f472b6]">📞</span> +91 84452 14371 | +91 91933 36211</div>
                   </div>

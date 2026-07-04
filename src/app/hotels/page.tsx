@@ -75,7 +75,7 @@ export default function HotelVouchers() {
   const handleShareWhatsApp = () => {
     // In a real app we'd need a guest phone input field for vouchers, but we can just open it blank or use contactNo.
     // The hotel voucher has `contactNo` (which is hotel's number), but no guest phone. We will just open a blank chat.
-    const message = `Dear ${data.guestName.split('X')[0].trim()},\n\nPlease find attached your Hotel Voucher for ${data.hotelName}.\nCheck In: ${data.checkIn}\nCheck Out: ${data.checkOut}\n\nThank you for choosing Triloki Divine Journey!`;
+    const message = `Dear ${data.guestName.split('X')[0].trim()},\n\nPlease find attached your Hotel Voucher for ${data.hotelName}.\nCheck In: ${data.checkIn}\nCheck Out: ${data.checkOut}\n\nThank you for choosing Triloki Group!`;
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/?text=${encodedMessage}`, "_blank");
   };
