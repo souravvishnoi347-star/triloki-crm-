@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FileText, Hotel, Car, Menu, X, Plane, Map, Users, Store } from "lucide-react";
+import { LayoutDashboard, FileText, Hotel, Car, Menu, X, Plane, Map, Users, Store, Settings } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -13,6 +13,7 @@ const navigation = [
   { name: "Transport Vouchers", href: "/transport", icon: Car },
   { name: "Lead Pipeline", href: "/leads", icon: Users },
   { name: "Vendors & Payables", href: "/vendors", icon: Store },
+  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {

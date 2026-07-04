@@ -1,12 +1,23 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Download, Loader2, Plus, Trash2, Map } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Download, Loader2, Plus, Trash2, Map, Sparkles, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+
+type DayPlan = {
+  id: number;
+  title: string;
+  description: string;
+  imageUrl: string;
+};
 
 export default function ItineraryBuilder() {
   const [isDownloading, setIsDownloading] = useState(false);
-  
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [openaiKey, setOpenaiKey] = useState("");
+
   const [data, setData] = useState({
     title: "5 Nights Magical Kashmir Tour",
     guestName: "Mr. Ramesh Kumar",
@@ -19,14 +30,27 @@ export default function ItineraryBuilder() {
         id: 1,
         title: "Arrival in Srinagar & Shikara Ride",
         description: "Welcome to Srinagar! Meet our representative at the airport and transfer to your houseboat. In the evening, enjoy a relaxing Shikara ride on Dal Lake. Overnight stay in Srinagar.",
+        imageUrl: "",
       },
       {
         id: 2,
         title: "Srinagar to Gulmarg Excursion",
         description: "After breakfast, proceed for a day trip to Gulmarg, the Meadow of Flowers. Enjoy the famous Gondola cable car ride (tickets at your own cost). Return to Srinagar in the evening.",
+        imageUrl: "",
       }
-    ]
+    ] as DayPlan[]
   });
+
+  // Fetch OpenAI key from settings
+  useEffect(() => {
+    async function fetchKey() {
+      const { data: settings } = await supabase.from("settings").select("openai_key").limit(1).single();
+      if (settings?.openai_key) {
+        setOpenaiKey(settings.openai_key);
+      }
+    }
+    fetchKey();
+  }, []);
 
   const finalCost = useMemo(() => {
     const totalNet = Number(data.hotelCost || 0) + Number(data.transportCost || 0);
@@ -37,7 +61,7 @@ export default function ItineraryBuilder() {
   const addDay = () => {
     setData({
       ...data,
-      days: [...data.days, { id: Date.now(), title: "", description: "" }]
+      days: [...data.days, { id: Date.now(), title: "", description: "", imageUrl: "" }]
     });
   };
 
@@ -53,6 +77,97 @@ export default function ItineraryBuilder() {
       ...data,
       days: data.days.map((d) => (d.id === id ? { ...d, [field]: value } : d))
     });
+  };
+
+  // AI Generation Function
+  const handleAIGenerate = async () => {
+    if (!aiPrompt.trim()) return;
+    if (!openaiKey) {
+      setAiError("Please add your OpenAI API key in Settings first.");
+      return;
+    }
+    setIsGenerating(true);
+    setAiError("");
+
+    try {
+      const systemPrompt = `You are a professional Indian travel agency itinerary planner for "Triloki Group". 
+You create detailed, day-by-day travel itineraries for clients.
+
+IMPORTANT RULES:
+1. Return ONLY valid JSON, no markdown, no code fences, no extra text.
+2. The JSON must have this exact structure:
+{
+  "title": "Package title string",
+  "days": [
+    {
+      "title": "Day title like: Arrival in Srinagar & Shikara Ride",
+      "description": "A detailed 2-3 sentence description of the day's activities, transfers, sightseeing spots, and hotel name.",
+      "searchTerm": "A 1-2 word search term for an image of the main location visited this day, e.g. 'Gulmarg' or 'Dal Lake' or 'Manali'"
+    }
+  ]
+}
+3. Make descriptions professional, warm, and detailed. Mention specific famous spots, activities, and suggested hotels.
+4. Each day should feel unique with proper flow from arrival to departure.`;
+
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${openaiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `Create a complete travel itinerary for: ${aiPrompt}` }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error?.message || `OpenAI API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const content = result.choices?.[0]?.message?.content?.trim();
+      
+      if (!content) throw new Error("Empty response from AI");
+
+      // Parse JSON (strip potential markdown fences)
+      let cleaned = content;
+      if (cleaned.startsWith("```")) {
+        cleaned = cleaned.replace(/```json?\n?/g, "").replace(/```\n?$/g, "").trim();
+      }
+      
+      const parsed = JSON.parse(cleaned);
+      
+      if (!parsed.title || !parsed.days || !Array.isArray(parsed.days)) {
+        throw new Error("Invalid AI response format");
+      }
+
+      // Build days with images from Unsplash Source (free, no API key needed)
+      const newDays: DayPlan[] = parsed.days.map((day: any, i: number) => ({
+        id: Date.now() + i,
+        title: day.title || `Day ${i + 1}`,
+        description: day.description || "",
+        imageUrl: `https://source.unsplash.com/800x500/?${encodeURIComponent(day.searchTerm || 'travel,india')},travel`
+      }));
+
+      setData(prev => ({
+        ...prev,
+        title: parsed.title,
+        days: newDays
+      }));
+
+    } catch (error: any) {
+      console.error("AI Generation Error:", error);
+      setAiError(error.message || "Failed to generate itinerary. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleDownload = async () => {
@@ -103,7 +218,19 @@ export default function ItineraryBuilder() {
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
-      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+      let heightLeft = pdfHeight;
+      let position = 0;
+      
+      pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pdf.internal.pageSize.getHeight();
+      
+      while (heightLeft > 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pdf.internal.pageSize.getHeight();
+      }
+      
       pdf.save(`Itinerary_${data.guestName.replace(/\s+/g, "_")}.pdf`);
     } catch (error: any) {
       console.error("PDF generation failed:", error);
@@ -122,6 +249,42 @@ export default function ItineraryBuilder() {
         </h2>
         
         <div className="space-y-8">
+
+          {/* AI Generator Section */}
+          <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-4 rounded-xl border border-purple-200">
+            <h3 className="text-sm font-semibold text-purple-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Sparkles size={16} className="text-purple-600" /> AI Itinerary Generator
+            </h3>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="e.g. 5 days in Kerala for honeymoon couple"
+                className="flex-1 px-3 py-2.5 bg-white border border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-900 placeholder:text-gray-400"
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAIGenerate()}
+                disabled={isGenerating}
+              />
+              <button
+                onClick={handleAIGenerate}
+                disabled={isGenerating || !aiPrompt.trim()}
+                className="px-4 py-2.5 bg-purple-600 text-white rounded-lg font-medium text-sm hover:bg-purple-700 transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shrink-0"
+              >
+                {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                {isGenerating ? "Generating..." : "Generate"}
+              </button>
+            </div>
+            {!openaiKey && (
+              <p className="text-xs text-amber-700 mt-2 bg-amber-50 px-3 py-1.5 rounded-md">⚠️ Add your OpenAI API key in Settings to enable AI generation.</p>
+            )}
+            {aiError && (
+              <div className="mt-2 flex items-start gap-2 bg-red-50 text-red-700 text-xs px-3 py-2 rounded-md">
+                <X size={14} className="shrink-0 mt-0.5 cursor-pointer" onClick={() => setAiError("")} />
+                {aiError}
+              </div>
+            )}
+          </div>
+
           {/* 1. Meta */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider border-b pb-2">1. Package Info</h3>
@@ -196,6 +359,17 @@ export default function ItineraryBuilder() {
                         value={day.description} onChange={e => updateDay(day.id, 'description', e.target.value)}
                       />
                     </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Image URL (auto-filled by AI)</label>
+                      <input 
+                        type="text" placeholder="https://..."
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                        value={day.imageUrl} onChange={e => updateDay(day.id, 'imageUrl', e.target.value)}
+                      />
+                      {day.imageUrl && (
+                        <img src={day.imageUrl} alt={day.title} className="mt-2 w-full h-24 object-cover rounded-md border" />
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -266,14 +440,35 @@ export default function ItineraryBuilder() {
               <div className="p-10 flex-1">
                 <h2 className="text-xl font-bold text-[#1f2937] border-b-2 border-[#ea580c] inline-block pb-1 mb-8 uppercase tracking-wider">Day by Day Plan</h2>
                 
-                <div className="space-y-8 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-[#fed7aa] before:to-transparent">
+                <div className="space-y-6">
                   {data.days.map((day, index) => (
-                    <div key={day.id} className="relative flex items-start gap-6">
-                      <div className="flex items-center justify-center w-9 h-9 rounded-full bg-[#ea580c] text-[#ffffff] font-bold text-sm shrink-0 border-4 border-[#ffffff] shadow-sm relative z-10">
-                        {index + 1}
+                    <div key={day.id} className="flex gap-5">
+                      {/* Day Number Circle */}
+                      <div className="flex flex-col items-center shrink-0">
+                        <div className="flex items-center justify-center w-9 h-9 rounded-full bg-[#ea580c] text-[#ffffff] font-bold text-sm border-4 border-[#ffffff] shadow-sm">
+                          {index + 1}
+                        </div>
+                        {index < data.days.length - 1 && (
+                          <div className="w-0.5 flex-1 bg-[#fed7aa] mt-1" />
+                        )}
                       </div>
-                      <div className="pt-1">
-                        <h3 className="text-lg font-bold text-[#1f2937] mb-2">{day.title || `Day ${index + 1}`}</h3>
+                      
+                      {/* Content */}
+                      <div className="flex-1 pb-4">
+                        <h3 className="text-base font-bold text-[#1f2937] mb-2">{day.title || `Day ${index + 1}`}</h3>
+                        
+                        {/* Image */}
+                        {day.imageUrl && (
+                          <div className="mb-3 rounded-lg overflow-hidden border border-[#e5e7eb]" style={{height: '160px'}}>
+                            <img 
+                              src={day.imageUrl} 
+                              alt={day.title} 
+                              className="w-full h-full object-cover"
+                              crossOrigin="anonymous"
+                            />
+                          </div>
+                        )}
+                        
                         <p className="text-sm text-[#4b5563] leading-relaxed whitespace-pre-line bg-[#f8fafc] p-4 rounded-lg border border-[#f1f5f9]">
                           {day.description || "No details provided for this day."}
                         </p>
