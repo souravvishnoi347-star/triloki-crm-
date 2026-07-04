@@ -83,7 +83,7 @@ export default function ItineraryBuilder() {
   const handleAIGenerate = async () => {
     if (!aiPrompt.trim()) return;
     if (!openaiKey) {
-      setAiError("Please add your OpenAI API key in Settings first.");
+      setAiError("Please add your Gemini API key in Settings first.");
       return;
     }
     setIsGenerating(true);
@@ -109,40 +109,37 @@ IMPORTANT RULES:
 3. Make descriptions professional, warm, and detailed. Mention specific famous spots, activities, and suggested hotels.
 4. Each day should feel unique with proper flow from arrival to departure.`;
 
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${openaiKey}`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${openaiKey}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: `Create a complete travel itinerary for: ${aiPrompt}` }
-          ],
-          temperature: 0.7,
-          max_tokens: 2000
+          systemInstruction: {
+            parts: [{ text: systemPrompt }]
+          },
+          contents: [{
+            parts: [{ text: `Create a complete travel itinerary for: ${aiPrompt}` }]
+          }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.7
+          }
         })
       });
 
       if (!response.ok) {
         const errData = await response.json();
-        throw new Error(errData.error?.message || `OpenAI API error: ${response.status}`);
+        throw new Error(errData.error?.message || `Gemini API error: ${response.status}`);
       }
 
       const result = await response.json();
-      const content = result.choices?.[0]?.message?.content?.trim();
+      const content = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
       
       if (!content) throw new Error("Empty response from AI");
 
-      // Parse JSON (strip potential markdown fences)
-      let cleaned = content;
-      if (cleaned.startsWith("```")) {
-        cleaned = cleaned.replace(/```json?\n?/g, "").replace(/```\n?$/g, "").trim();
-      }
-      
-      const parsed = JSON.parse(cleaned);
+      // Parse JSON
+      const parsed = JSON.parse(content);
       
       if (!parsed.title || !parsed.days || !Array.isArray(parsed.days)) {
         throw new Error("Invalid AI response format");

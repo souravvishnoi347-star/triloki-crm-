@@ -273,7 +273,7 @@ export default function SettingsPage() {
         <div className="p-6 space-y-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-gray-500">
-              OpenAI API Key
+              Gemini API Key
             </label>
             <div className="relative">
               <input
@@ -297,9 +297,9 @@ export default function SettingsPage() {
             </div>
             <p className="text-xs text-gray-400 mt-1">
               This key is used for AI-powered itinerary generation. Your key is
-              stored securely and never shared. Get your key from{" "}
-              <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-orange-500 underline">
-                platform.openai.com
+              stored securely and never shared. Get your free key from{" "}
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-orange-500 underline">
+                Google AI Studio
               </a>
             </p>
           </div>
