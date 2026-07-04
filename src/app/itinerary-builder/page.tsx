@@ -109,7 +109,7 @@ IMPORTANT RULES:
 3. Make descriptions professional, warm, and detailed. Mention specific famous spots, activities, and suggested hotels.
 4. Each day should feel unique with proper flow from arrival to departure.`;
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${openaiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${openaiKey.trim()}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
